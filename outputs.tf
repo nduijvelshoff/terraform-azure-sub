@@ -1,6 +1,6 @@
 output "subscriptions" {
   description = "subscription(s) details"
-  value       = azurerm_subscription.sub
+  value       = data.azurerm_subscription.sub
 }
 
 output "management_group_subscription_associations" {

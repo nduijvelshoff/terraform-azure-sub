@@ -1,3 +1,7 @@
+data "azurerm_subscription" "sub" {
+  subscription_id = azapi_resource.sub.output.properties["subscriptionId"]
+}
+
 data "azurerm_billing_mca_account_scope" "mca" {
   for_each = try(var.billing_mca_account != null ? { default = var.billing_mca_account } : {}, {})
 
@@ -31,30 +35,34 @@ resource "azurerm_management_group_subscription_association" "sub" {
   for_each = try(var.subscription.management_group_name, null) != null || try(var.subscription.management_group_display_name, null) != null ? { default = var.subscription } : {}
 
   management_group_id = data.azurerm_management_group.group["default"].id
-  subscription_id     = "/subscriptions/${azurerm_subscription.sub.subscription_id}"
+  subscription_id     = "/subscriptions/${data.azurerm_subscription.sub.subscription_id}"
 }
 
-resource "azurerm_subscription" "sub" {
-  subscription_name = var.subscription.name
-  alias             = var.subscription.alias
-  subscription_id   = var.subscription.subscription_id
-  workload          = var.subscription.workload
+resource "random_uuid" "guid" {}
 
-  tags = coalesce(
-    var.subscription.tags, var.tags
-  )
+resource "azapi_resource" "sub" {
+  type = "Microsoft.Subscription/aliases@2021-10-01"
+  name = random_uuid.guid.result
 
-  billing_scope_id = try(var.subscription.billing_scope_id, null) != null ? var.subscription.billing_scope_id : try(
-    var.billing_mca_account, null) != null ? data.azurerm_billing_mca_account_scope.mca["default"].id : try(
-    var.billing_enrollment_account, null) != null ? data.azurerm_billing_enrollment_account_scope.enrollment["default"].id : try(
-  var.billing_mpa_account, null) != null ? data.azurerm_billing_mpa_account_scope.mpa["default"].id : null
+  parent_id = "/"
+  body = {
+    properties = {
+      displayName = var.subscription.name
+      workload    = var.subscription.workload
+      billingScope = try(var.subscription.billing_scope_id, null) != null ? var.subscription.billing_scope_id : try(
+        var.billing_mca_account, null) != null ? data.azurerm_billing_mca_account_scope.mca["default"].id : try(
+        var.billing_enrollment_account, null) != null ? data.azurerm_billing_enrollment_account_scope.enrollment["default"].id : try(
+      var.billing_mpa_account, null) != null ? data.azurerm_billing_mpa_account_scope.mpa["default"].id : null
+    }
+  }
+  response_export_values = ["properties.subscriptionId"]
 }
 
 resource "azurerm_management_lock" "lock" {
   for_each = try(var.subscription.management_lock, null) != null ? { default = var.subscription } : {}
 
   name  = var.subscription.management_lock.name
-  scope = azurerm_subscription.sub.id
+  scope = data.azurerm_subscription.sub.id
 
   lock_level = var.subscription.management_lock.level
   notes      = var.subscription.management_lock.notes
