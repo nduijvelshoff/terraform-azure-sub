@@ -10,5 +10,9 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.0"
     }
+    assert = {
+      source  = "hashicorp/assert"
+      version = ">= 0.16"
+    }
   }
 }
