@@ -47,9 +47,9 @@ resource "azapi_resource" "sub" {
   parent_id = "/"
   body = {
     properties = {
-      displayName = !can(var.subscription.subscription_id) ? var.subscription.name : null
+      displayName = var.subscription.subscription_id != null ? var.subscription.name : null
       workload    = var.subscription.workload
-      billingScope = !can(var.subscription.subscription_id) ? try(var.subscription.billing_scope_id, null) != null ? var.subscription.billing_scope_id : try(
+      billingScope = var.subscription.subscription_id != null ? try(var.subscription.billing_scope_id, null) != null ? var.subscription.billing_scope_id : try(
         var.billing_mca_account, null) != null ? data.azurerm_billing_mca_account_scope.mca["default"].id : try(
         var.billing_enrollment_account, null) != null ? data.azurerm_billing_enrollment_account_scope.enrollment["default"].id : try(
       var.billing_mpa_account, null) != null ? data.azurerm_billing_mpa_account_scope.mpa["default"].id : null : null
